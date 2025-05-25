@@ -1,9 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../../lib/db';
+import { supabase } from '../../../../../../lib/supabase';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'GET') return res.status(405).end();
   const { give, receive } = req.query;
-  const stmt = db.prepare('SELECT id, link, discord, created_at FROM entries WHERE give = ? AND receive = ? ORDER BY created_at DESC LIMIT 1000');
-  const entries = stmt.all(give, receive);
-  res.status(200).json(entries);
+
+  const { data, error } = await supabase
+    .from('entries')
+    .select('*')
+    .eq('give', give)
+    .eq('receive', receive)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(200).json(data);
 }

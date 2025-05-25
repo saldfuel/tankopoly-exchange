@@ -1,14 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../../lib/db';
+import { supabase } from '../../../../../../lib/supabase';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
   const { give, receive } = req.query;
   const { link, discord } = req.body;
   if (!link || typeof link !== 'string') return res.status(400).json({ error: 'Link required' });
 
-  const stmt = db.prepare('INSERT INTO entries (give, receive, link, discord) VALUES (?, ?, ?, ?)');
-  stmt.run(give, receive, link, discord || null);
+  const { data, error } = await supabase
+    .from('entries')
+    .insert([{ give, receive, link, discord }])
+    .select();
 
-  res.status(200).json({ success: true });
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(200).json({ success: true, data });
 }
